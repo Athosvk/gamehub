@@ -10,6 +10,18 @@ struct SimulationResult
 	unsigned defendersLeft;
 };
 
+template<unsigned TSize>
+std::array<unsigned, TSize> RollDice(std::array<Die, TSize>& a_Dice, unsigned a_NumRolls)
+{
+	std::array<unsigned, TSize> rolls;
+	for (unsigned i = 0; i < a_NumRolls; i++)
+	{
+		rolls[i] = a_Dice[i].Roll();
+	}
+	std::sort(rolls.begin(), rolls.end(), std::greater<unsigned>());
+	return rolls;
+}
+
 SimulationResult Simulate(std::array<Die, 2>& a_DefenderDice, std::array<Die, 3>& a_AttackerDice)
 {
 	unsigned defendingUnits = 50000;
@@ -17,26 +29,15 @@ SimulationResult Simulate(std::array<Die, 2>& a_DefenderDice, std::array<Die, 3>
 	while (defendingUnits > 0 && attackingUnits > 0)
 	{
 		unsigned numAttackDice = std::min(3u, attackingUnits);
-		std::array<unsigned, 3> rolledDigits;
-		for (unsigned i = 0; i < numAttackDice; i++)
-		{
-			rolledDigits[i] = a_AttackerDice[i].Roll();
-		}
-		std::sort(rolledDigits.begin(), rolledDigits.end(), std::greater<unsigned>());
+		std::array<unsigned, 3> attackResults = RollDice(a_AttackerDice, numAttackDice);
+		unsigned numLargeRolls = std::count_if(attackResults.begin(), attackResults.end(), [](unsigned roll) { return roll > 3; });
 
-		unsigned numLargeNumbers = std::count_if(rolledDigits.begin(), rolledDigits.end(), [](unsigned roll) { return roll > 2; });
-
-		unsigned numDefenderDice = numLargeNumbers > 1 ? 1 : std::min(defendingUnits, 2u);
-		std::array<unsigned, 2> defenderRolledDigits;
-		for (unsigned i = 0; i < numDefenderDice; i++)
-		{
-			defenderRolledDigits[i] = a_DefenderDice[i].Roll();
-		}
-		std::sort(defenderRolledDigits.begin(), defenderRolledDigits.end(), std::greater<unsigned>());
+		unsigned numDefenderDice = numLargeRolls > 1 ? 1 : std::min(defendingUnits, 2u);
+		std::array<unsigned, 2> defenderResults = RollDice(a_DefenderDice, numDefenderDice);
 
 		for (unsigned i = 0; i < std::min(numDefenderDice, numAttackDice); i++)
 		{
-			if (defenderRolledDigits[i] < rolledDigits[i])
+			if (defenderResults[i] < attackResults[i])
 			{
 				defendingUnits--;
 			}
